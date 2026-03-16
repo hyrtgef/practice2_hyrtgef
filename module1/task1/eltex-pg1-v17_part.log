@@ -1,0 +1,25 @@
+ls (tab tab)
+echo $HITS (tab tab)
+echo $HISTSIZE
+ls -ld ~/.*
+export HISTTIMEFORMAT="%d.%m.%y %H:%M:%S "
+date
+history | grep date
+tail ~/.bash_history | grep date
+export PROMPT_COMMAND="history -a"
+whoami
+tail ~/.bash_history
+history | tail -5
+DATE=$(date +%d.%m.%Y)
+echo $DATE
+TIME=$(date +%H:%M:%S)
+echo$TIME
+DATE_TIME="$DATE $TIME"
+echo $DATE_TIME
+ls /bin /sbin | grep '[0-9]'
+PS1='\u@\H-\t>'
+export PS1
+bash
+echo $PS1
+exit
+mkdir -p ~/$(date +%Y)-{01..12}
