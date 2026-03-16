@@ -1,0 +1,93 @@
+1. Создание SSH-ключа
+ssh-keygen -t rsa -b 4096 -f ~/.ssh/id_rsa_practice1
+Ключ создан: Sun Mar 15 11:45:00 PM +07 2026
+2. Копирование ключа на сервер 2 практики
+ssh-copy-id -i ~/.ssh/id_rsa_practice1.pub root@172.16.9.191
+Ключ скопирован: Sun Mar 15 11:50:30 PM +07 2026
+3. Подключение к серверу 2 и сравнение ключей
+На сервере 2 (172.16.9.191):
+cat ~/.ssh/authorized_keys
+ls -la ~/.ssh/authorized_keys
+Результат: ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQCnZLOYJMwd/rlnqFv3M9ZQ/TziLqPrHA4e8Bu81ryW21AymPb8qC6lqLBaPUIqisrVV26oJDlQCcl2y06CILpK5vk4cLOK5MLQET7f7VuJMbFzdCU9qBzGGqcvjUzfaDZv/erlJTmFmUuIrjww/I1lRwRVfpH72JuyyUaNJppsrp2JRCt0hmka9NgFGBlAqdaucrhyKnYAFCqAtFi0sIXVgkftcFSoKOKNHF60xb9jaxMTnOaAPcURL8MDe/4fGHOntBjjwVPljNJV9oC9CITskiDb2WSPFNA7nYJtfOa+NSnN7Y22iI72mmwkZc08y3F08oletn00iVCA1ccshfys1bTUZ8uqQaOgC2weJOVZj/6OFocm96t+QNDLJXxzIeoijWxURywuKJ9rwkJYrMmys0sHx9sdPslHnsuUNYSIjiT+5zV0VKvUuLC1Sdxk63ZOBAqJOuZ9uryWO64DMs1rsLSSPcNRrphPpiWBeUx4OXWCKGgU6cd4qDW1TQSSdaZX4aUT0RWxnRozpzj3rxxCV/MbH1aw8zCKCMdOvJQR1irN/tTb1afQXaRU3NBG3TNxJO5Bz7A24mkVmWgs9CpUlnNIZTVbcPR/n8lKLwBvx0MUYhYfYX/OYAChMqgPRP/JfSp0OGWl5mUUqOwyN9qXms4mW/u6WwjuPoEa5TWlMQ== eltex-pg1-v17@eltex-2026-spring - такой же ключ
+-rw------- (600)
+4. Создание пользователя user1
+useradd -m -s /bin/bash user1
+passwd user1
+5. Создание пользователей user2 и user3
+adduser user2
+adduser user3
+6. Смена shell для user3 на nologin
+usermod -s /usr/sbin/nologin user3
+cat /etc/passwd | grep user3
+7. Создание общей группы для пользователей user*
+groupadd grpusers
+usermod -aG grpusers user1
+usermod -aG grpusers user2
+usermod -aG grpusers user3
+9. Создание каталога /opt/share с битом SGID
+mkdir -p /opt/share
+chown :grpusers /opt/share
+chmod 2770 /opt/share
+10. Установка umask 007 для user1 (снимает все права для прочих, включая чтение)
+echo "umask 007" >> /home/user1/.bashrc
+11. Создание файлов пользователями в /opt/share и попытка удаления чужих файлов
+su - user1 -c "touch /opt/share/user1_file.txt"
+su - user2 -c "touch /opt/share/user2_file.txt"
+su - user3 -c "touch /opt/share/user3_file.txt"
+su - user1 -c "rm /opt/share/user2_file.txt" # Ошибка: Permission denied
+su - user2 -c "rm /opt/share/user3_file.txt" # Ошибка: Permission denied
+su - user3 -c "rm /opt/share/user1_file.txt" # Ошибка: Permission denied
+12. Установка sticky bit и повторение пункта 11
+chmod +t /opt/share
+ls -ld /opt/share # должен быть флаг t
+Попытка удаления чужих файлов (по-прежнему ошибка):
+13. Настройка доступа к dmesg
+Для user1 через sudo:
+usermod -aG sudo user1
+Для user2 через SUID-скрипт:
+/usr/bin/dmesg
+14. Установка срока действия пароля 10 дней для user*
+chage -M 10 user1
+chage -M 10 user2
+chage -M 10 user3
+chage -l user1 | grep 'Maximum'
+chage -l user2 | grep 'Maximum'
+chage -l user3 | grep 'Maximum'
+15. Редактирование /etc/motd
+nano /etc/motd
+Добавлена строка Роман Жевно
+Проверка: cat /etc/motd
+16. Копирование /etc в /root/etc_backup через rsync
+mkdir -p /root/etc_backup
+rsync -av /etc/ /root/etc_backup/
+Бэкап создан, количество файлов: 201
+17. Архивация etc_backup разными алгоритмами
+tar -czf etc_backup.tar.gz etc_backup/  # gzip
+tar -cjf etc_backup.tar.bz2 etc_backup/ # bzip2
+tar -cf - etc_backup/ | 7za a -si etc_backup.tar.7z # 7zip
+Сравнение размеров:
+554K /root/etc_backup.tar.bz2
+584K /root/etc_backup.tar.gz
+471K /root/etc_backup.tar.xz
+18. Обновление motd и синхронизация с rsync
+Добавление даты в /etc/motd:
+Синхронизация бэкапа:
+rsync -av /etc/ /root/etc_backup/
+Обновление архива с motd:
+cd /root && tar -czf etc_backup_updated.tar.gz etc_backup/
+19. Сравнение bzip2 архива с оригинальным каталогом
+mkdir -p /tmp/etc_compare
+tar -xjf etc_backup.tar.bz2 -C /tmp/etc_compare
+diff -r /tmp/etc_compare/etc_backup/ /root/etc_backup/
+# Результат: diff не вывел различий - содержимое идентично
+rm -rf /tmp/etc_compare
+20. Распаковка архивов и сравнение файлов motd
+mkdir -p /root/etc_backup_gzip /root/etc_backup_7zip
+Распаковка gzip:
+tar -xzf etc_backup.tar.gz -C /root/etc_backup_gzip
+Распаковка 7zip:
+7za x etc_backup.tar.7z -o/tmp/
+tar -xf /tmp/etc_backup.tar -C /root/etc_backup_7zip
+Сравнение motd:
+diff /root/etc_backup_gzip/etc_backup/etc/motd /root/etc_backup_7zip/etc_backup/etc/motd
+Результат: файлы идентичны (diff не вывел различий)

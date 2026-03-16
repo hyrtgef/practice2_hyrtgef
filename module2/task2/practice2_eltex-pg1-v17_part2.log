@@ -1,0 +1,33 @@
+1. Записи из journalctl за первые 20 секунд после загрузки
+who -b
+system boot  2026-03-12 08:27
+BOOT_TIME=$(date -d "$(who -b | awk '{print $3" "$4}')" +%s)
+Boot time: 1773304020
+END_TIME=$((BOOT_TIME + 20))
+End time: 1773304040
+journalctl -b --since="@$BOOT_TIME" --until="@$END_TIME"
+Результат: -- No entries --
+journalctl -b --since="@$BOOT_TIME" --until="@$END_TIME" | wc -l
+2. Источники и сообщения из auth.log
+find / -name auth.log 2>/dev/null
+auth.log найден в: /var/log/auth.log
+awk '{ source = $5; gsub(/\[[0-9]+\]/, "", source); message = substr($0, index($0, ":") + 2); print source " " message }' /var/log/auth.log | sort
+Команда выполнена, результат отсортирован по источникам
+3. Количество повторений для каждого источника в auth.log
+cat /var/log/auth.log | awk '{print $5}' | sed 's/\[[0-9]*\]//g' | sort | uniq -c | sort -rn
+Результат: получен список источников с количеством повторений, отсортированный по убыванию
+Наибольшее количество: session - 546 повторений
+4. Пользователи с shell /usr/sbin/nologin
+for user in $(awk -F: '$7 == "/usr/sbin/nologin" {print $1}' /etc/passwd); do uid=$(grep "^$user:" /etc/passwd | cut -d: -f3); groups=$(groups $user | cut -d: -f2 | sed 's/^ //'); echo "$uid, $user, $groups"; done | sort -rn
+5. Поиск строк с 'kernel' в выводе dmesg
+dmesg | grep kernel
+Количество найденных строк: 13
+6. Количество строк в /var/log/kern.log
+wc -l /var/log/kern.log
+Результат: 33 строки
+7. Форматирование записей apt/history.log
+awk '
+/^Commandline:/ {cmd = $0}
+/^Start-Date:/ {start = $0}
+/^End-Date:/ {end = $0; print cmd "; " start "; " end}
+' /var/log/apt/history.log
